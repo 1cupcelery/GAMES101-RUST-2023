@@ -45,7 +45,7 @@ fn main() {
         let frame_buffer = r.frame_buffer();
         let image = frame_buffer2cv_mat(frame_buffer);
 
-        imwrite(filename, &image, &Vector::default()).unwrap();
+        imwrite(filename, &image, &opencv::core::Vector::default()).unwrap();
         return;
     }
     while k != 27 {
