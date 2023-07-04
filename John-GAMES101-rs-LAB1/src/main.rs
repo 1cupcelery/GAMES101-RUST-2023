@@ -45,14 +45,34 @@ fn main() {
         let frame_buffer = r.frame_buffer();
         let image = frame_buffer2cv_mat(frame_buffer);
 
-        imwrite(filename, &image, &opencv::core::Vector::default()).unwrap();
+        imwrite(filename, &image, &Vector::default()).unwrap();
         return;
     }
+    // while k != 27 {
+    //     r.clear(rasterizer::Buffer::Both);
+    //     r.set_model(get_model_matrix(angle));
+    //     r.set_view(get_view_matrix(eye_pos));
+    //     r.set_projection(get_projection_matrix(45.0, 1.0, 0.1, 50.0));
+    //     r.draw_triangle(pos_id, ind_id, Primitive::Triangle);
+    //
+    //     let frame_buffer = r.frame_buffer();
+    //     let image = frame_buffer2cv_mat(frame_buffer);
+    //     imshow("image", &image).unwrap();
+    //
+    //     k = wait_key(80).unwrap();
+    //     //println!("frame count: {}", frame_count);
+    //     if k == 'a' as i32 {
+    //         angle += 10.0;
+    //     } else if k == 'd' as i32 {
+    //         angle -= 10.0;
+    //     }
+    //     frame_count += 1;
+    // }
     while k != 27 {
         r.clear(rasterizer::Buffer::Both);
-        r.set_model(get_model_matrix(angle));
+        r.set_model(get_model_matrix_ar(Vector3::new(1.0,2.0,3.0),angle));
         r.set_view(get_view_matrix(eye_pos));
-        r.set_projection(get_projection_matrix(45.0, 1.0, 0.1, 50.0));
+        r.set_projection(get_projection_matrix(45.0, 1.0, -0.1, -50.0));
         r.draw_triangle(pos_id, ind_id, Primitive::Triangle);
 
         let frame_buffer = r.frame_buffer();
@@ -60,12 +80,9 @@ fn main() {
         imshow("image", &image).unwrap();
 
         k = wait_key(80).unwrap();
-        println!("frame count: {}", frame_count);
-        if k == 'a' as i32 {
-            angle += 10.0;
-        } else if k == 'd' as i32 {
+        if k == 'r' as i32 {
             angle -= 10.0;
-        } 
+        }
         frame_count += 1;
     }
 }
