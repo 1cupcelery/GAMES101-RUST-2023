@@ -6,8 +6,8 @@ use nalgebra::{Vector2, Vector3, Vector4};
 pub struct Triangle {
     pub v: [Vector3<f64>; 3],
     pub color: [Vector3<f64>; 3],
-    pub tex_coords: [Vector2<f64>; 3],
-    pub normal: [Vector3<f64>; 3],
+    pub tex_coords: [Vector2<f64>; 3],//似乎用不上
+    pub normal: [Vector3<f64>; 3],//似乎用不上
 }
 
 impl Triangle {

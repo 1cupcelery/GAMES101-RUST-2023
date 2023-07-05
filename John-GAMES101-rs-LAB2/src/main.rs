@@ -38,7 +38,7 @@ fn main() -> Result<()> {
     let ind_id = r.load_indices(&ind);
     let col_id = r.load_colors(&cols);
     let mut k = 0;
-    let mut frame_count = 0;
+    //let mut frame_count = 0;
 
     while k != 27 {
         r.clear(rasterizer::Buffer::Both);
@@ -52,9 +52,8 @@ fn main() -> Result<()> {
 
         imshow("image", &image)?;
         k = wait_key(2000).unwrap();
-        println!("frame count: {}", frame_count);
-        frame_count += 1;
+        //println!("frame count: {}", frame_count);
+        //frame_count += 1;
     }
-
     Ok(())
 }

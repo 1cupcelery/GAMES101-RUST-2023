@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use nalgebra::{Matrix4, Vector3, Vector4};
+use nalgebra::{Matrix4, Vector2, Vector3, Vector4};
 use crate::triangle::Triangle;
 
 #[allow(dead_code)]
@@ -28,8 +28,9 @@ pub struct Rasterizer {
     frame_buf: Vec<Vector3<f64>>,
     depth_buf: Vec<f64>,
     /*  You may need to uncomment here to implement the MSAA method  */
-    // frame_sample: Vec<Vector3<f64>>,
-    // depth_sample: Vec<f64>,
+    //frame_sample: Vec<Vector3<f64>>,
+    //depth_sample: Vec<f64>,
+
     width: u64,
     height: u64,
     next_id: usize,
@@ -158,7 +159,17 @@ impl Rasterizer {
 
     pub fn rasterize_triangle(&mut self, t: &Triangle) {
         /*  implement your code here  */
-        
+        let xmin=t.v[0][0].min(t.v[1][0]).min(t.v[2][0]) as usize;
+        let xmax=(t.v[0][0].max(t.v[1][0]).max(t.v[2][0])+1.0) as usize;
+        let ymin=t.v[0][1].min(t.v[1][1]).min(t.v[2][1]) as usize;
+        let ymax=(t.v[0][1].max(t.v[1][1]).max(t.v[2][1])+1.0) as usize;
+        for x in xmin..=xmax {
+            for y in ymin..=ymax {
+                if inside_triangle(x as f64 + 0.5, y as f64 + 0.5,&t.v) {
+                    self.set_pixel(&Vector3::new(x as f64,y as f64 ,0.0), &t.get_color());
+                }
+            }
+        }
     }
 
     pub fn frame_buffer(&self) -> &Vec<Vector3<f64>> {
@@ -170,10 +181,36 @@ fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
     Vector4::new(v3.x, v3.y, v3.z, w.unwrap_or(1.0))
 }
 
+fn dot(v1:Vector2<f64>,v2:Vector2<f64>) -> f64 {
+    return v1[0]*v2[1]-v1[1]*v2[0]
+}
+
 fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool {
     /*  implement your code here  */
+    //如果P在三角形ABC内部，则满足以下三个条件：P,A在BC的同侧、P,B在AC的同侧、PC在AB的同侧。某一个不满足则表示P不在三角形内部。
+    let (a1,b1)=(v[0][0],v[0][1]); //A
+    let (a2,b2)=(v[1][0],v[1][1]); //B
+    let (a3,b3)=(v[2][0],v[2][1]); //C
+    let AB=Vector2::new(a2-a1,b2-b1);
+    let AP=Vector2::new(x-a1,y-b1);
+    let AC=Vector2::new(a3-a1,b3-b1);
+    let s1=(dot(AB,AP)*dot(AB,AC)>=0.0);
 
-    false
+    let BC=Vector2::new(a3-a2,b3-b2);
+    let BP=Vector2::new(x-a2,y-b2);
+    let BA=-AB;
+    let s2=(dot(BC,BP)*dot(BC,BA)>=0.0);
+
+    let CA=-AC;
+    let CP=Vector2::new(x-a3,y-b3);
+    let CB=-BC;
+    let s3=(dot(CA,CP)*dot(CA,CB)>=0.0);
+
+    if s1&&s2&&s3 {
+        true
+    } else {
+        false
+    }
 }
 
 fn compute_barycentric2d(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> (f64, f64, f64) {
