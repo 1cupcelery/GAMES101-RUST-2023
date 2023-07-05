@@ -64,17 +64,27 @@ impl Rasterizer {
         self.frame_buf[ind as usize] = *color;
     }
 
+    fn set_depth(&mut self, point: &Vector3<f64>, depth: f64) -> bool {
+        let ind = (self.height as f64 - 1.0 - point.y) * self.width as f64 + point.x;
+        if depth>self.depth_buf[ind as usize]{
+            self.depth_buf[ind as usize] = depth;
+            true
+        } else {
+            false
+        }
+    }
+
     pub fn clear(&mut self, buff: Buffer) {
         match buff {
             Buffer::Color => {
                 self.frame_buf.fill(Vector3::new(0.0, 0.0, 0.0));
             }
             Buffer::Depth => {
-                self.depth_buf.fill(f64::MAX);
+                self.depth_buf.fill(f64::NEG_INFINITY);
             }
             Buffer::Both => {
                 self.frame_buf.fill(Vector3::new(0.0, 0.0, 0.0));
-                self.depth_buf.fill(f64::MAX);
+                self.depth_buf.fill(f64::NEG_INFINITY);
             }
         }
     }
@@ -166,7 +176,10 @@ impl Rasterizer {
         for x in xmin..=xmax {
             for y in ymin..=ymax {
                 if inside_triangle(x as f64 + 0.5, y as f64 + 0.5,&t.v) {
-                    self.set_pixel(&Vector3::new(x as f64,y as f64 ,0.0), &t.get_color());
+                    let d=depth(x as f64,y as f64,&t);
+                    if self.set_depth(&Vector3::new(x as f64,y as f64 ,0.0), d) {
+                        self.set_pixel(&Vector3::new(x as f64,y as f64 ,0.0), &t.get_color());
+                    }
                 }
             }
         }
@@ -175,6 +188,19 @@ impl Rasterizer {
     pub fn frame_buffer(&self) -> &Vec<Vector3<f64>> {
         &self.frame_buf
     }
+}
+
+pub fn depth(x: f64,y:f64,t: &Triangle) -> f64 {
+    let x_a=t.v[0][0];
+    let y_a=t.v[0][1];
+    let x_b=t.v[1][0];
+    let y_b=t.v[1][1];
+    let x_c=t.v[2][0];
+    let y_c=t.v[2][1];
+    let a=(-(x-x_b)*(y_c-y_b)+(y-y_b)*(x_c-x_b))/(-(x_a-x_b)*(y_c-y_b)+(y_a-y_b)*(x_c-x_b));
+    let b=(-(x-x_c)*(y_a-y_c)+(y-y_c)*(x_a-x_c))/(-(x_b-x_c)*(y_a-y_c)+(y_b-y_c)*(x_a-x_c));
+    let r=1.0-a-b;
+    a*t.v[0][2]+b*t.v[1][2]+r*t.v[2][2]
 }
 
 fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
