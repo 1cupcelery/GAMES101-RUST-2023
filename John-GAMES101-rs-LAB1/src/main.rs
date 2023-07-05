@@ -72,7 +72,7 @@ fn main() {
         r.clear(rasterizer::Buffer::Both);
         r.set_model(get_model_matrix_ar(Vector3::new(1.0,2.0,3.0),angle));
         r.set_view(get_view_matrix(eye_pos));
-        r.set_projection(get_projection_matrix(45.0, 1.0, -0.1, -50.0));
+        r.set_projection(get_projection_matrix(45.0, 1.0, 0.1, 50.0));
         r.draw_triangle(pos_id, ind_id, Primitive::Triangle);
 
         let frame_buffer = r.frame_buffer();
