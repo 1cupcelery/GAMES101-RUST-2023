@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use nalgebra::{Matrix4, Vector2, Vector3, Vector4};
+use opencv::core::compare;
 use crate::triangle::Triangle;
+use std::cmp::Ordering;
+use std::cmp::Ordering::{Equal, Greater, Less};
 
 #[allow(dead_code)]
 pub enum Buffer {
@@ -28,7 +31,7 @@ pub struct Rasterizer {
     frame_buf: Vec<Vector3<f64>>,
     depth_buf: Vec<f64>,
     /*  You may need to uncomment here to implement the MSAA method  */
-    //frame_sample: Vec<Vector3<f64>>,
+    frame_sample: Vec<Vec<(f64,Vector3<f64>,f64)>>,
     //depth_sample: Vec<f64>,
 
     width: u64,
@@ -52,6 +55,8 @@ impl Rasterizer {
         r.height = h;
         r.frame_buf.resize((w * h) as usize, Vector3::zeros());
         r.depth_buf.resize((w * h) as usize, 0.0);
+        r.frame_sample.resize((w * h) as usize, Vec::new());
+        //r.depth_sample.resize((w * h) as usize, 0.0);
         r
     }
 
@@ -64,13 +69,10 @@ impl Rasterizer {
         self.frame_buf[ind as usize] = *color;
     }
 
-    fn set_depth(&mut self, point: &Vector3<f64>, depth: f64) -> bool {
+    fn set_depth(&mut self, point: &Vector3<f64>, depth: f64) {
         let ind = (self.height as f64 - 1.0 - point.y) * self.width as f64 + point.x;
         if depth>self.depth_buf[ind as usize]{
             self.depth_buf[ind as usize] = depth;
-            true
-        } else {
-            false
         }
     }
 
@@ -78,13 +80,17 @@ impl Rasterizer {
         match buff {
             Buffer::Color => {
                 self.frame_buf.fill(Vector3::new(0.0, 0.0, 0.0));
+                self.frame_sample.fill(Vec::new());
             }
             Buffer::Depth => {
                 self.depth_buf.fill(f64::NEG_INFINITY);
+                //self.depth_sample.fill(f64::NEG_INFINITY);
             }
             Buffer::Both => {
                 self.frame_buf.fill(Vector3::new(0.0, 0.0, 0.0));
                 self.depth_buf.fill(f64::NEG_INFINITY);
+                self.frame_sample.fill(Vec::new());
+                //self.depth_sample.fill(f64::NEG_INFINITY);
             }
         }
     }
@@ -175,11 +181,32 @@ impl Rasterizer {
         let ymax=(t.v[0][1].max(t.v[1][1]).max(t.v[2][1])+1.0) as usize;
         for x in xmin..=xmax {
             for y in ymin..=ymax {
-                if inside_triangle(x as f64 + 0.5, y as f64 + 0.5,&t.v) {
+                let mut num_inside=0;
+                if inside_triangle(x as f64 + 0.25, y as f64 + 0.25,&t.v) {num_inside=num_inside+1;}
+                if inside_triangle(x as f64 + 0.25, y as f64 + 0.75,&t.v) {num_inside=num_inside+1;}
+                if inside_triangle(x as f64 + 0.75, y as f64 + 0.25,&t.v) {num_inside=num_inside+1;}
+                if inside_triangle(x as f64 + 0.75, y as f64 + 0.75,&t.v) {num_inside=num_inside+1;}
+                if num_inside>0 {
                     let d=depth(x as f64,y as f64,&t);
-                    if self.set_depth(&Vector3::new(x as f64,y as f64 ,0.0), d) {
-                        self.set_pixel(&Vector3::new(x as f64,y as f64 ,0.0), &t.get_color());
+                    let c= t.get_color();
+                    let pp=num_inside as f64 / 4.0;
+                    let ind=self.get_index(x,y);
+                    self.frame_sample[ind].push((d,c,pp));
+                }
+            }
+        }
+        for x in xmin..=xmax {
+            for y in ymin..=ymax {
+                let ind=self.get_index(x,y);
+                if self.frame_sample[ind].len()!=0 {
+                    self.frame_sample[ind].sort_by(|a,b| cp(a,b).unwrap());
+                    let mut c=self.frame_sample[ind][0].1*self.frame_sample[ind][0].2;
+                    for layer in &self.frame_sample[ind] {
+                        if *layer!=self.frame_sample[ind][0] {
+                            c=c*(1.0-layer.2)+layer.1*layer.2;
+                        }
                     }
+                    self.set_pixel(&Vector3::new(x as f64,y as f64 ,0.0), &c);
                 }
             }
         }
@@ -189,6 +216,17 @@ impl Rasterizer {
         &self.frame_buf
     }
 }
+
+pub fn cp(a:&(f64,Vector3<f64>,f64),b:&(f64,Vector3<f64>,f64)) -> Option<Ordering> {
+    return if (*a).0 > (*b).0 {
+        Some(Greater)
+    } else if (*a).0 == (*b).0 {
+        Some(Equal)
+    } else {
+        Some(Less)
+    }
+}
+
 
 pub fn depth(x: f64,y:f64,t: &Triangle) -> f64 {
     let x_a=t.v[0][0];
@@ -220,17 +258,17 @@ fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool {
     let AB=Vector2::new(a2-a1,b2-b1);
     let AP=Vector2::new(x-a1,y-b1);
     let AC=Vector2::new(a3-a1,b3-b1);
-    let s1=(dot(AB,AP)*dot(AB,AC)>=0.0);
+    let s1=dot(AB,AP)*dot(AB,AC)>=0.0;
 
     let BC=Vector2::new(a3-a2,b3-b2);
     let BP=Vector2::new(x-a2,y-b2);
     let BA=-AB;
-    let s2=(dot(BC,BP)*dot(BC,BA)>=0.0);
+    let s2=dot(BC,BP)*dot(BC,BA)>=0.0;
 
     let CA=-AC;
     let CP=Vector2::new(x-a3,y-b3);
     let CB=-BC;
-    let s3=(dot(CA,CP)*dot(CA,CB)>=0.0);
+    let s3=dot(CA,CP)*dot(CA,CB)>=0.0;
 
     if s1&&s2&&s3 {
         true
@@ -248,3 +286,5 @@ fn compute_barycentric2d(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> (f64, f64, f6
         / (v[2].x * (v[0].y - v[1].y) + (v[1].x - v[0].x) * v[2].y + v[0].x * v[1].y - v[1].x * v[0].y);
     (c1, c2, c3)
 }
+// let (a,b,r)=compute_barycentric2d(x as f64 +0.5,y as f64 +0.5, &t.v);
+// let d= a*t.v[0][2]+b*t.v[1][2]+r*t.v[2][2];
