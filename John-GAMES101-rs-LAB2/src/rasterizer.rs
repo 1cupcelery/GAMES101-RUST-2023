@@ -246,7 +246,9 @@ fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
     Vector4::new(v3.x, v3.y, v3.z, w.unwrap_or(1.0))
 }
 
-fn cross(v1:Vector2<f64>,v2:Vector2<f64>) -> f64 { return v1[0]*v2[1]-v1[1]*v2[0] }
+fn cross(v1:Vector2<f64>,v2:Vector2<f64>) -> f64 {
+    return v1[0]*v2[1]-v1[1]*v2[0]
+}
 
 fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool {
     /*  implement your code here  */
