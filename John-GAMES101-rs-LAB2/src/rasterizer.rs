@@ -246,9 +246,7 @@ fn to_vec4(v3: Vector3<f64>, w: Option<f64>) -> Vector4<f64> {
     Vector4::new(v3.x, v3.y, v3.z, w.unwrap_or(1.0))
 }
 
-fn dot(v1:Vector2<f64>,v2:Vector2<f64>) -> f64 {
-    return v1[0]*v2[1]-v1[1]*v2[0]
-}
+fn cross(v1:Vector2<f64>,v2:Vector2<f64>) -> f64 { return v1[0]*v2[1]-v1[1]*v2[0] }
 
 fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool {
     /*  implement your code here  */
@@ -259,17 +257,17 @@ fn inside_triangle(x: f64, y: f64, v: &[Vector3<f64>; 3]) -> bool {
     let AB=Vector2::new(a2-a1,b2-b1);
     let AP=Vector2::new(x-a1,y-b1);
     let AC=Vector2::new(a3-a1,b3-b1);
-    let s1=dot(AB,AP)*dot(AB,AC)>=0.0;
+    let s1=cross(AB,AP)*cross(AB,AC)>=0.0;
 
     let BC=Vector2::new(a3-a2,b3-b2);
     let BP=Vector2::new(x-a2,y-b2);
     let BA=-AB;
-    let s2=dot(BC,BP)*dot(BC,BA)>=0.0;
+    let s2=cross(BC,BP)*cross(BC,BA)>=0.0;
 
     let CA=-AC;
     let CP=Vector2::new(x-a3,y-b3);
     let CB=-BC;
-    let s3=dot(CA,CP)*dot(CA,CB)>=0.0;
+    let s3=cross(CA,CP)*cross(CA,CB)>=0.0;
 
     if s1&&s2&&s3 {
         true
